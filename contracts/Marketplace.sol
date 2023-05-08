@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin-contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract Marketplace is IERC721Receiver {
 
@@ -11,31 +12,33 @@ contract Marketplace is IERC721Receiver {
     uint256[] public available;
 
     struct Listing{
-        address recipient,  // receiver of fees on sale
-        address token,      // address of token contract
-        uint256 id,         // id of token
-        uint256 price,      // starting price for sale or highest bid
-        ListingType type    // type of sale to be done
+        address recipient;  // receiver of fees on sale
+        address token;      // address of token contract
+        uint256 id;         // id of token
+        uint256 price;      // starting price for sale or highest bid
+        Sale sale;    // sale of sale to be done
     }
 
-    enum ListingType {Fixed};
+    enum Sale {Fixed}
 
     event Listed(address token, uint256 id, address lister);
     event Bought(address token, uint256 id, address buyer, uint256 price);
+
+    error InvalidListing();
 
     /**
      * 
      * @param listing struct containing information
      */
-    function list(Listing listing) external {
+    function list(Listing memory listing) external {
 
         // transfer 
         IERC721(listing.token).safeTransferFrom(msg.sender, address(this), listing.id);
 
-        if(listing.type == ListingType.Fixed) {
+        if(listing.sale == Sale.Fixed) {
             require(listing.price > 0, "Cannot list without price");
         } else {
-            throw InvalidListing();
+            revert InvalidListing();
         }
 
         // add listing to storage
@@ -44,7 +47,7 @@ contract Marketplace is IERC721Receiver {
         available.push(index);
         ++index;
 
-        emit Listed(token, id, msg.sender);
+        emit Listed(listing.token, listing.id, msg.sender);
     }
 
     /**
@@ -57,26 +60,27 @@ contract Marketplace is IERC721Receiver {
         require(token != address(0), "Invalid index");
 
         uint256 price;
-        if(l.type == ListingType.Fixed){
+        if(l.sale == Sale.Fixed){
             // check sender has sent enough to purchase
-            uint256 price = l.price;
+            price = l.price;
             require(msg.value >= price, "");
             funds[l.recipient] += price;
 
             // transfer token
-            IERC721(token).safeTransfer(msg.sender, l.id);
+            IERC721(token).safeTransferFrom(address(this), msg.sender, l.id);
         }
 
 
-        emit Bought(token, id, msg.sender, price);
+        emit Bought(token, l.id, msg.sender, price);
     }
 
     /**
      * 
      * @param recipient address to reciever funds of caller
      */
-    function withdraw(address recipient){
+    function withdraw(address recipient) external {
         uint256 amount = funds[msg.sender];
+        funds[msg.sender] = 0;
         (bool success, ) = recipient.call{value: amount}("");
         require(success, "Address: unable to send value, recipient may have reverted");
     }
@@ -96,6 +100,8 @@ contract Marketplace is IERC721Receiver {
         address from,
         uint256 tokenId,
         bytes calldata data
-    ) external returns (bytes4);
+    ) external returns (bytes4){
+
+    }
 
 }
