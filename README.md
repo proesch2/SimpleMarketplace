@@ -2,9 +2,9 @@
 
 An NFT marketplace project to demonstrate various types of NFT sales available
 
-User NFTs are enabled to be minted through ERC1155 standard
+User NFTs are enabled to be minted through ERC721 standard
 
-Users can list and sell any ERC721 or 1155 NFTs
+Users can list and sell ERC721 tokens
 
 Types of Sales:
 - Fixed Price - The NFT is listed for a specific price, the first buyer to pay that price receives the NFT.
