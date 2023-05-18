@@ -16,15 +16,10 @@ contract Marketplace is IERC721Receiver {
         address token;      // address of token contract
         uint256 id;         // id of token
         uint256 price;      // starting price for sale or highest bid
-        Sale sale;    // sale of sale to be done
     }
-
-    enum Sale {Fixed}
 
     event Listed(address token, uint256 id, address lister);
     event Bought(address token, uint256 id, address buyer, uint256 price);
-
-    error InvalidListing();
 
     /**
      * 
@@ -35,11 +30,7 @@ contract Marketplace is IERC721Receiver {
         // transfer 
         IERC721(listing.token).safeTransferFrom(msg.sender, address(this), listing.id);
 
-        if(listing.sale == Sale.Fixed) {
-            require(listing.price > 0, "Cannot list without price");
-        } else {
-            revert InvalidListing();
-        }
+        require(listing.price > 0, "Cannot list without price");
 
         // add listing to storage
         listings[index] = listing;
@@ -52,24 +43,26 @@ contract Marketplace is IERC721Receiver {
 
     /**
      * 
-     * @param _index listing index to purchase
+     * @param _index listing index of available to purchase
      */
     function buy(uint256 _index) external payable {
-        Listing memory l = listings[_index];
+        Listing memory l = listings[available[_index]];
         address token = l.token;
         require(token != address(0), "Invalid index");
 
-        uint256 price;
-        if(l.sale == Sale.Fixed){
-            // check sender has sent enough to purchase
-            price = l.price;
-            require(msg.value >= price, "");
-            funds[l.recipient] += price;
+        uint256 price = l.price;
 
-            // transfer token
-            IERC721(token).safeTransferFrom(address(this), msg.sender, l.id);
-        }
+        // check and allocate funds
+        require(msg.value >= price, "Not enough value sent to purchase");
+        funds[l.recipient] += price;
 
+        // remove listing, shift available ids
+        delete listings[available[_index]];
+        available[_index] = available[available.length-1];
+        available.pop();
+
+        // transfer token
+        IERC721(token).safeTransferFrom(address(this), msg.sender, l.id);
 
         emit Bought(token, l.id, msg.sender, price);
     }

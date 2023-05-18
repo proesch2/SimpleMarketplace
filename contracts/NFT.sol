@@ -1,7 +1,19 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC11155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract NFT is ERC1155{
-    
+/**
+ * @title NFT
+ * @author @proesch2
+ * @notice NFT contract for testing purposes
+ */
+contract NFT is ERC721{
+    uint256 id;
+
+    constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_){}
+
+    function mint(){
+        _mint(msg.sender, id++);
+    }
 }
